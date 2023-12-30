@@ -245,7 +245,7 @@ def convert_to_int(df):
             pass  # If conversion is not possible, proceed to the next column
     return df
 
-def divide_events(string):
+def divide_events(text):
     pattern = re.compile(r'([PWR]) \d{4}-\d{2}-\d{2} \d{2}:\d{2}')
     # Wyszukiwanie pasujących sekwencji w tekście
     matches = pattern.findall(text)
@@ -385,31 +385,31 @@ def match_details(path):
     return df
 
     def extract_table_data(table):
-    table_data = []
-    
-    # Znajdź nagłówki z pierwszego wiersza thead
-    header_row = table.select('thead tr')[1]  # Use the second row to get headers with tooltip
-    headers = []
+        table_data = []
 
-    for header in header_row.find_all(['th', 'td']):
-        if 'tooltip' in header.attrs:
-            headers.append(header['tooltip'].strip())
-        else:
-            headers.append(header.text.strip())
+        # Znajdź nagłówki z pierwszego wiersza thead
+        header_row = table.select('thead tr')[1]  # Use the second row to get headers with tooltip
+        headers = []
 
-    rows = table.select('tbody tr')
-    
-    for row in rows:
-        player_data = {}
-        columns = row.find_all(['td', 'th'])
-        
-        # Iteruj przez kolumny w danym wierszu
-        for i, col in enumerate(columns):
-            player_data[headers[i]] = col.text.strip()
-        
-        table_data.append(player_data)
+        for header in header_row.find_all(['th', 'td']):
+            if 'tooltip' in header.attrs:
+                headers.append(header['tooltip'].strip())
+            else:
+                headers.append(header.text.strip())
 
-    return table_data
+        rows = table.select('tbody tr')
+
+        for row in rows:
+            player_data = {}
+            columns = row.find_all(['td', 'th'])
+
+            # Iteruj przez kolumny w danym wierszu
+            for i, col in enumerate(columns):
+                player_data[headers[i]] = col.text.strip()
+
+            table_data.append(player_data)
+
+        return table_data
 
     def extract_team(url):
         response = requests.get(url)
@@ -436,7 +436,7 @@ def match_details(path):
         return df
     
     def reports_links(url):
-    list_ = extract_mecze_details_links(extract_mecze_links(url)) #dff.Zespół[0])
-    list_ = ['https://ligafanow.pl/'+ elem for elem in list_]
-    return list_
+        list_ = extract_mecze_details_links(extract_mecze_links(url)) #dff.Zespół[0])
+        list_ = ['https://ligafanow.pl/'+ elem for elem in list_]
+        return list_
 
