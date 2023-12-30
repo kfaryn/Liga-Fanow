@@ -119,7 +119,16 @@ def get_matches(league, round_=None, team=None, ligi=ligi):
 
 def table_of_links(league, ligi = ligi):
     """
-    Function that extracts a table with columns containing links from the given URL
+    Retrieves and extracts a table with columns containing links from the specified league's URL.
+
+    Parameters:
+    - league (str): The name of the league for which the table with links will be extracted.
+    - ligi (dict): A dictionary containing league names as keys and their corresponding URLs as values.
+
+    Returns:
+    - pandas.DataFrame: A DataFrame representing a table with columns containing links extracted from the HTML
+      content of the league's URL. The DataFrame includes headers and link columns. Links are extracted from 'a' tags
+      within 'td' elements of the HTML table. If a 'td' element contains no link, an empty string is appended.
     """
     # Get response from URL
     response = requests.get(ligi[league])
