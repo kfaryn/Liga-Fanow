@@ -5,5 +5,5 @@ Based on functions in utils user is able to:
 - get_table() 
 - get_matches()
 - get_squad_details()
-- get_match_details()
-- get_scorers()
+- get_match_details() -in progress
+- get_scorers() - in progress
