@@ -13,6 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 
 import re
+from unidecode import unidecode
 
 # GLOBAL DICTIONARIES
 
@@ -113,7 +114,18 @@ def get_matches(league, round_=None, team=None, ligi=ligi):
     if team is not None:
         df = df[(df['Gospodarz'] == team) | (df['Gość'] == team)]      
     
+    df = df.reset_index(drop=True)
+    
     return df
+
+def get_squad_details(league, team, ligi=ligi):
+    links = table_of_links(league)
+    try:
+        link = links.loc[links['Zespół'].str.contains(adjust_team_name(team)), 'Zespół'].iloc[0]
+        df = extract_team(link)
+        return df
+    except: 
+        print('Podany zespół nie został znaleziony sprawdź pisownię ponownie')
 
 # ASIDE FUNCTIONS
 
@@ -384,59 +396,78 @@ def match_details(path):
     
     return df
 
-    def extract_table_data(table):
-        table_data = []
+# Functions to gather teams data
 
-        # Znajdź nagłówki z pierwszego wiersza thead
-        header_row = table.select('thead tr')[1]  # Use the second row to get headers with tooltip
-        headers = []
+def extract_table_data(table):
+    table_data = []
 
-        for header in header_row.find_all(['th', 'td']):
-            if 'tooltip' in header.attrs:
-                headers.append(header['tooltip'].strip())
-            else:
-                headers.append(header.text.strip())
+    # Znajdź nagłówki z pierwszego wiersza thead
+    header_row = table.select('thead tr')[1]  # Use the second row to get headers with tooltip
+    headers = []
 
-        rows = table.select('tbody tr')
+    for header in header_row.find_all(['th', 'td']):
+        if 'tooltip' in header.attrs:
+            headers.append(header['tooltip'].strip())
+        else:
+            headers.append(header.text.strip())
 
-        for row in rows:
-            player_data = {}
-            columns = row.find_all(['td', 'th'])
+    rows = table.select('tbody tr')
 
-            # Iteruj przez kolumny w danym wierszu
-            for i, col in enumerate(columns):
-                player_data[headers[i]] = col.text.strip()
+    for row in rows:
+        player_data = {}
+        columns = row.find_all(['td', 'th'])
 
-            table_data.append(player_data)
+        # Iteruj przez kolumny w danym wierszu
+        for i, col in enumerate(columns):
+            player_data[headers[i]] = col.text.strip()
 
-        return table_data
+        table_data.append(player_data)
 
-    def extract_team(url):
-        response = requests.get(url)
-        soup = BeautifulSoup(response1.text, 'html.parser')
+    return table_data
 
-        table1 = soup.find('table', {'id': 'mytxablecc'})
-        table2 = soup.find('table', {'id': 'mytxablec'})
+def extract_team(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Sprawdź, czy obie tabele zostały znalezione
-        if table1 and table2:
-            # Ekstrahuj dane z obu tabel
-            data1 = extract_table_data(table1)
-            data2 = extract_table_data(table2)
+    table1 = soup.find('table', {'id': 'mytxablecc'})
+    table2 = soup.find('table', {'id': 'mytxablec'})
 
-        # Połącz dane z obu tabel w jedną listę
-        combined_data = data1 + data2
+    # Sprawdź, czy obie tabele zostały znalezione
+    if table1 and table2:
+        # Ekstrahuj dane z obu tabel
+        data1 = extract_table_data(table1)
+        data2 = extract_table_data(table2)
 
-        # Przekształć dane do DataFrame
-        df = pd.DataFrame(combined_data)
-        df.columns = ['Imie i nazwisko', 'Numer', 'Liczba wystepów', 'Liczba bramek',
-           'Asysty', 'Kanadyjcztk', 'Superstar', 'Top6', 'MVP', 'Czerwone kartki',
-           'Zółte kartki', 'Stracone bramki', 'Samobój', 'Obronione karne',
-           'Czyste konto', 'Gold Team','ID']
-        return df
-    
-    def reports_links(url):
-        list_ = extract_mecze_details_links(extract_mecze_links(url)) #dff.Zespół[0])
-        list_ = ['https://ligafanow.pl/'+ elem for elem in list_]
-        return list_
+    # Połącz dane z obu tabel w jedną listę
+    combined_data = data1 + data2
+
+    # Przekształć dane do DataFrame
+    df = pd.DataFrame(combined_data)
+    df.columns = ['Imie i nazwisko', 'Numer', 'Liczba wystepów', 'Liczba bramek',
+       'Asysty', 'Kanadyjcztk', 'Superstar', 'Top6', 'MVP', 'Czerwone kartki',
+       'Zółte kartki', 'Stracone bramki', 'Samobój', 'Obronione karne',
+       'Czyste konto', 'Gold Team','ID']
+    return df
+
+def reports_links(url):
+    list_ = extract_mecze_details_links(extract_mecze_links(url)) #dff.Zespół[0])
+    list_ = ['https://ligafanow.pl/'+ elem for elem in list_]
+    return list_
+
+def adjust_team_name(string, separator='-'):
+    """
+    Transforms the input text to lowercase (ASCII), removes diacritics,
+    and then joins words using the specified separator.
+
+    :param string: The original text
+    :param separator: The separator used to join words
+    :return: The transformed text
+    """
+    # Convert to lowercase (ASCII) and remove diacritics
+    string = unidecode(string.lower())
+
+    # Join words using the specified separator
+    string = string.replace(' ', separator)
+
+    return string
 
