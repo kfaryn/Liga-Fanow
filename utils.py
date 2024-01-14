@@ -126,6 +126,20 @@ def get_squad_details(league, team, ligi=ligi):
         return df
     except: 
         print('Podany zespół nie został znaleziony sprawdź pisownię ponownie')
+        
+def get_match_details(league, team, kolejka=None, opponent = None):
+    """
+    -opponent is not yet ready available
+    """   
+    if ((kolejka == None) & (opponent == None)) == False:
+#         if kolejka != None:
+#             link = matches[matches.kolejka == str(kolejka)].link[0]
+#         else:
+        matches = get_matches_links(league, team)
+        link = matches[matches.kolejka == str(kolejka)].link.iloc[0]
+    else:
+        link = None
+    return match_details(link)
 
 # ASIDE FUNCTIONS
 
@@ -471,3 +485,102 @@ def adjust_team_name(string, separator='-'):
 
     return string
 
+# Functions to gather matches data
+
+def match_details(path):
+    if path != None:
+        response = requests.get(path)
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Znajdź wszystkie tabelki na stronie
+        tables = soup.find_all('table')
+
+        # Znajdź zespoły w title
+        title_content = soup.title.string
+        matches = re.search(r'\(.*?\)\s*(.+?)\s+vs\s+(.+?)\s+-', title_content)
+        if matches:
+            team1 = matches[1].strip()
+            team2 = matches[2].strip()
+
+        # Przechowaj ramki danych w liście
+        dataframes = []
+
+        # Sprawdź, czy znaleziono jakiekolwiek tabele
+        if tables:
+            # Iteruj przez wszystkie znalezione tabele
+            for table in tables:
+                # Wydziel dane z tabeli do listy słowników
+                table_data = []
+                rows = table.find_all('tr')
+
+                # Sprawdź, czy istnieje przynajmniej jeden wiersz
+                if rows:
+                    header = [header.text.strip() for header in rows[0].find_all(['th', 'td'])]
+
+                    # Iteruj przez pozostałe wiersze
+                    for row in rows[1:]:
+                        row_data = [cell.text.strip() for cell in row.find_all(['th', 'td'])]
+                        table_data.append(dict(zip(header, row_data)))
+
+                    # Przekształć dane do DataFrame
+                    df = pd.DataFrame(table_data)
+                    dataframes.append(df)
+
+        # Wydrukuj ramki danych
+        tab1 = dataframes[1]
+        tab1['Zespół'] = team1
+        tab2 = dataframes[2]
+        tab2['Zespół'] = team2
+
+        df = pd.concat([tab1,tab2]).dropna()
+    else:
+        df = None
+    return df
+
+def get_matches_links(league, team):
+    # Inicjalizuj listy, do których będziemy dodawać dane
+    links = table_of_links(league)
+    link = links.loc[links['Zespół'].str.contains(adjust_team_name(team)), 'Zespół'].iloc[0]
+    matches_links = reports_links(link)
+    
+    links_list = []
+    kolejka_list = []
+    data_list = []
+    godzina_list = []
+
+    # Iteruj po linkach
+    for link in matches_links:
+        # Pobierz zawartość strony
+        response = requests.get(link)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Wyszukaj element z informacją o kolejce
+        kolejka_element = soup.find('div', class_='BoxHeaderTitle')
+
+        if kolejka_element:
+            # Pobierz tekst
+            tekst_kolejki = kolejka_element.get_text(strip=True)
+
+            # Użyj wyrażenia regularnego do wyciągnięcia danych
+            match = re.match(r"Raport   - Kolejka (\d+), (\d{4}-\d{2}-\d{2} \d{2}:\d{2})", tekst_kolejki)
+
+            if match:
+                numer_kolejki, data_godzina = match.groups()
+
+                # Dodaj dane do odpowiednich list
+                links_list.append(link)
+                kolejka_list.append(numer_kolejki)
+                data_list.append(data_godzina.split()[0])
+                godzina_list.append(data_godzina.split()[1])
+
+    # Stwórz DataFrame z zebranych danych
+    df = pd.DataFrame({
+        'link': links_list,
+        'kolejka': kolejka_list,
+        'data': data_list,
+        'godzina': godzina_list
+    })
+
+    # Wyświetl ostateczną tabelkę
+    return df
