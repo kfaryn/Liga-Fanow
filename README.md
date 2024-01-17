@@ -5,5 +5,5 @@ Based on functions in utils user is able to:
 - get_table() 
 - get_matches()
 - get_squad_details()
-- get_match_details() - based on round number. Searching by opponent will be available soon.
+- get_match_details() 
 - get_scorers() - in progress
