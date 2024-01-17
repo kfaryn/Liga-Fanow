@@ -127,18 +127,18 @@ def get_squad_details(league, team, ligi=ligi):
     except: 
         print('Podany zespół nie został znaleziony sprawdź pisownię ponownie')
         
-def get_match_details(league, team, kolejka=None, opponent = None):
-    """
-    -opponent is not yet ready available
-    """   
-    if ((kolejka == None) & (opponent == None)) == False:
-#         if kolejka != None:
-#             link = matches[matches.kolejka == str(kolejka)].link[0]
-#         else:
+def get_match_details(league, team, kolejka=None, opponent=None):
+
+    if kolejka is not None:
         matches = get_matches_links(league, team)
-        link = matches[matches.kolejka == str(kolejka)].link.iloc[0]
+        link = matches[matches['kolejka'].astype(str).str.strip().eq(str(kolejka).strip())].link.iloc[0]
+    elif opponent is not None:
+        matches = get_matches_links(league, team)
+        link = matches[matches['przeciwnik'].astype(str).str.strip().str.upper().eq(str(opponent).strip().upper())].link.iloc[0]
     else:
-        link = None
+        print('Nie podano kolejki ani przeciwnika')
+        link=None
+
     return match_details(link)
 
 # ASIDE FUNCTIONS
@@ -548,6 +548,8 @@ def get_matches_links(league, team):
     kolejka_list = []
     data_list = []
     godzina_list = []
+    wyniki_list = []
+    przeciwnicy_list = []
 
     # Iteruj po linkach
     for link in matches_links:
@@ -574,12 +576,23 @@ def get_matches_links(league, team):
                 data_list.append(data_godzina.split()[0])
                 godzina_list.append(data_godzina.split()[1])
 
+                przeciwnik_element = soup.find_all('h2')
+        
+        if przeciwnik_element:
+            
+            wyniki_list.append(przeciwnik_element[1].text.strip())
+            # Dodanie przeciwnika
+            przeciwnik = next(element for element in [przeciwnik_element[0].text.strip().upper(), przeciwnik_element[2].text.strip().upper()] if element != team.upper())
+            przeciwnicy_list.append(przeciwnik)
+
     # Stwórz DataFrame z zebranych danych
     df = pd.DataFrame({
         'link': links_list,
         'kolejka': kolejka_list,
         'data': data_list,
-        'godzina': godzina_list
+        'godzina': godzina_list,
+        'wynik': wyniki_list,
+        'przeciwnik': przeciwnicy_list
     })
 
     # Wyświetl ostateczną tabelkę
